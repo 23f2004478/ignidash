@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Fork: India adaptation (read first)
+
+This is a fork of schelskedevco/ignidash adapted for India. `origin` is the fork, `upstream` the original.
+
+- **One switch:** `src/lib/config/region.ts` (`REGION_CONFIG`, default `IN`). It drives currency display
+  (INR, en-IN grouping, compact k / L / Cr) and the tax system the engine uses.
+- **Calc classes take `taxRegion`, defaulting to `'US'`** (`TaxProcessor`, `Incomes`, `Income`), so upstream unit
+  tests keep testing the US path. Only `simulation-engine.ts` and `number-formatters.ts` read `REGION_CONFIG`.
+  `simulation-engine.test.ts` pins US with `vi.mock`.
+- **India tax:** `src/lib/calc/tax-data/india-new-regime.ts` plus `TaxProcessor.processIndia`. New regime slabs,
+  75k standard deduction, 87A rebate with marginal relief, surcharge, 4% cess, 112A equity gains at 12.5% over
+  1.25L, dividends at slab. Payroll levy is Karnataka professional tax (Rs 200/month) in place of FICA. Output
+  reuses the US-shaped fields (`federalIncomeTaxes` carries Indian income tax), so charts work unchanged.
+  Tests: `src/lib/calc/taxes-india.test.ts`.
+- **Not done yet:** UI labels still say Federal / FICA / NIIT; US account types (401k, Roth, HSA) and RMDs still
+  show; no old regime, HRA, 80C, EPF/NPS account types.
+- Keep the diff against upstream small and contained so `git merge upstream/main` stays easy.
+
 ## Project Overview
 
 Ignidash is an open-source personal financial planning app (AGPL-3.0). It runs Monte Carlo simulations, historical backtesting, US tax estimation, and AI chat/insights for retirement planning.

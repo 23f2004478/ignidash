@@ -5,10 +5,13 @@
  * All formatters use the locale and symbol from CURRENCY_CONFIG.
  */
 
+import { REGION_CONFIG } from '@/lib/config/region';
+
+/** Driven by the fork's region switch (src/lib/config/region.ts) */
 export const CURRENCY_CONFIG = {
-  currency: 'USD',
-  locale: 'en-US',
-  symbol: '$',
+  currency: REGION_CONFIG.currency,
+  locale: REGION_CONFIG.locale,
+  symbol: REGION_CONFIG.symbol,
 } as const;
 
 const currencyFormatter = new Intl.NumberFormat(CURRENCY_CONFIG.locale, {
@@ -36,6 +39,13 @@ export function formatCompactCurrency(amount: number, fractionDigits: number = 2
   const absNum = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
   const symbol = CURRENCY_CONFIG.symbol;
+
+  if (REGION_CONFIG.compactUnits === 'indian') {
+    if (absNum >= 10000000) return sign + symbol + (absNum / 10000000).toFixed(2) + 'Cr';
+    if (absNum >= 100000) return sign + symbol + (absNum / 100000).toFixed(2) + 'L';
+    if (absNum >= 1000) return sign + symbol + (absNum / 1000).toFixed(1) + 'k';
+    return sign + symbol + absNum.toFixed(fractionDigits);
+  }
 
   if (absNum >= 1000000000) return sign + symbol + (absNum / 1000000000).toFixed(2) + 'B';
   if (absNum >= 1000000) return sign + symbol + (absNum / 1000000).toFixed(2) + 'M';

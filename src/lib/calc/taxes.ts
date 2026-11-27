@@ -40,6 +40,19 @@ import {
   SOCIAL_SECURITY_TAX_THRESHOLDS_HEAD_OF_HOUSEHOLD,
 } from './tax-data/social-security-tax-brackets';
 import { SECTION_121_EXCLUSION } from './tax-data/section-121-exclusion';
+import {
+  INDIA_NEW_REGIME_SLABS,
+  INDIA_STANDARD_DEDUCTION_SALARY,
+  INDIA_REBATE_87A_INCOME_LIMIT,
+  INDIA_REBATE_87A_MAX,
+  INDIA_CESS_RATE,
+  INDIA_EQUITY_GAINS_SURCHARGE_CAP,
+  INDIA_LTCG_EXEMPTION,
+  INDIA_LTCG_RATE,
+  INDIA_LTCG_BRACKETS,
+  getIndiaSurchargeRate,
+} from './tax-data/india-new-regime';
+import type { TaxRegion } from '@/lib/config/region';
 
 export interface CapitalGainsTaxesData {
   taxableIncomeTaxedAsCapitalGains: number;
@@ -135,7 +148,8 @@ export class TaxProcessor {
 
   constructor(
     private simulationState: SimulationState,
-    private filingStatus: FilingStatus
+    private filingStatus: FilingStatus,
+    private taxRegion: TaxRegion = 'US'
   ) {}
 
   /** Save carryover state before first tax calculation of the year */
@@ -178,6 +192,8 @@ export class TaxProcessor {
         incomeData.socialSecurityIncome > 0 ? incomeData.taxableSocialSecurityIncome / incomeData.socialSecurityIncome : 0,
       provisionalIncome: incomeData.provisionalIncome,
     };
+
+    if (this.taxRegion === 'IN') return this.processIndia(incomeData, annualIncomesData, socialSecurityTaxes);
 
     const standardDeduction = this.getStandardDeduction();
     const deductionUsedForOrdinary = Math.min(standardDeduction, incomeData.adjustedIncomeTaxedAsOrdinary);
@@ -236,6 +252,93 @@ export class TaxProcessor {
         taxDeductibleContributions: incomeData.taxDeductibleContributions,
         capitalLossDeduction: incomeData.capitalLossDeduction,
         section121Exclusion: incomeData.section121Exclusion,
+      },
+      deductions: { standardDeduction },
+    };
+  }
+
+  /**
+   * India, new regime. Reuses the US-shaped output so charts and tables work unchanged:
+   * "federal income tax" carries slab tax after the 87A rebate, plus surcharge and cess;
+   * "capital gains tax" carries section 112A equity gains tax, plus its surcharge and cess.
+   * NIIT does not exist in India and is always zero. The US capital loss deduction
+   * (losses set against salary) is not allowed in India, so it is ignored here.
+   */
+  private processIndia(
+    incomeData: IncomeSourcesData,
+    annualIncomesData: IncomesData,
+    socialSecurityTaxes: SocialSecurityTaxesData
+  ): TaxesData {
+    // Dividends are taxed at slab rates in India, not as capital gains
+    const slabGrossIncome = Math.max(
+      0,
+      incomeData.incomeTaxedAsOrdinary + incomeData.taxableDividendIncome - incomeData.taxDeductibleContributions
+    );
+    const standardDeduction = Math.min(INDIA_STANDARD_DEDUCTION_SALARY, incomeData.earnedIncome);
+    const slabIncome = Math.max(0, slabGrossIncome - standardDeduction);
+
+    const {
+      federalIncomeTaxAmount: slabTax,
+      topMarginalFederalIncomeTaxRate,
+      federalIncomeTaxBrackets,
+    } = this.processFederalIncomeTaxes({ taxableIncomeTaxedAsOrdinary: slabIncome });
+
+    const equityGains = Math.max(0, incomeData.realizedGains);
+    const taxableEquityGains = Math.max(0, equityGains - INDIA_LTCG_EXEMPTION);
+    const totalIncome = slabIncome + equityGains;
+
+    // Section 87A: full rebate up to the cap within the limit; marginal relief just above it.
+    // The rebate is not available against section 112A gains, so it only reduces slab tax.
+    let rebate = 0;
+    if (totalIncome <= INDIA_REBATE_87A_INCOME_LIMIT) {
+      rebate = Math.min(slabTax, INDIA_REBATE_87A_MAX);
+    } else {
+      const incomeAboveLimit = totalIncome - INDIA_REBATE_87A_INCOME_LIMIT;
+      rebate = Math.max(0, slabTax - incomeAboveLimit);
+    }
+
+    const surchargeRate = getIndiaSurchargeRate(totalIncome);
+    const gainsSurchargeRate = Math.min(surchargeRate, INDIA_EQUITY_GAINS_SURCHARGE_CAP);
+
+    const federalIncomeTaxAmount = (slabTax - rebate) * (1 + surchargeRate) * (1 + INDIA_CESS_RATE);
+    const capitalGainsTaxAmount = taxableEquityGains * INDIA_LTCG_RATE * (1 + gainsSurchargeRate) * (1 + INDIA_CESS_RATE);
+
+    const federalIncomeTaxes: FederalIncomeTaxesData = {
+      taxableIncomeTaxedAsOrdinary: slabIncome,
+      federalIncomeTaxAmount,
+      effectiveFederalIncomeTaxRate: incomeData.totalIncome > 0 ? federalIncomeTaxAmount / incomeData.totalIncome : 0,
+      topMarginalFederalIncomeTaxRate: federalIncomeTaxAmount > 0 ? topMarginalFederalIncomeTaxRate : 0,
+      federalIncomeTaxBrackets,
+    };
+
+    const capitalGainsTaxes: CapitalGainsTaxesData = {
+      taxableIncomeTaxedAsCapitalGains: equityGains,
+      capitalGainsTaxAmount,
+      effectiveCapitalGainsTaxRate: equityGains > 0 ? capitalGainsTaxAmount / equityGains : 0,
+      topMarginalCapitalGainsTaxRate: taxableEquityGains > 0 ? INDIA_LTCG_RATE : 0,
+      capitalGainsTaxBrackets: INDIA_LTCG_BRACKETS,
+    };
+
+    const niit: NIITData = { netInvestmentIncome: 0, incomeSubjectToNiit: 0, niitAmount: 0, threshold: 0 };
+    const earlyWithdrawalPenalties = this.processEarlyWithdrawalPenalties(incomeData.earlyWithdrawals);
+
+    const totalTaxLiability = federalIncomeTaxAmount + capitalGainsTaxAmount + earlyWithdrawalPenalties.totalPenaltyAmount;
+    const difference = totalTaxLiability - annualIncomesData.totalAmountWithheld;
+
+    return {
+      federalIncomeTaxes,
+      capitalGainsTaxes,
+      niit,
+      earlyWithdrawalPenalties,
+      socialSecurityTaxes,
+      incomeSources: incomeData,
+      totalTaxesDue: difference > 0 ? difference : 0,
+      totalTaxesRefund: difference < 0 ? Math.abs(difference) : 0,
+      totalTaxableIncome: slabIncome + equityGains,
+      adjustments: {
+        taxDeductibleContributions: incomeData.taxDeductibleContributions,
+        capitalLossDeduction: 0,
+        section121Exclusion: 0,
       },
       deductions: { standardDeduction },
     };
@@ -535,6 +638,7 @@ export class TaxProcessor {
   }
 
   private getFederalIncomeTaxBrackets(): FederalIncomeTaxBracket[] {
+    if (this.taxRegion === 'IN') return INDIA_NEW_REGIME_SLABS;
     switch (this.filingStatus) {
       case 'single':
         return FEDERAL_INCOME_TAX_BRACKETS_SINGLE;

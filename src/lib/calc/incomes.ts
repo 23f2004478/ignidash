@@ -10,6 +10,8 @@ import type { IncomeInputs, IncomeType } from '@/lib/schemas/inputs/income-form-
 import type { TimePoint } from '@/lib/schemas/inputs/income-expenses-shared-schemas';
 
 import type { SimulationState } from './simulation-engine';
+import type { TaxRegion } from '@/lib/config/region';
+import { INDIA_PROFESSIONAL_TAX_MONTHLY, INDIA_PROFESSIONAL_TAX_THRESHOLD_MONTHLY } from './tax-data/india-new-regime';
 
 /** Processes all active incomes each month and aggregates annual totals */
 export class IncomesProcessor {
@@ -112,8 +114,8 @@ export interface IncomesData {
 export class Incomes {
   private readonly incomes: Income[];
 
-  constructor(data: IncomeInputs[]) {
-    this.incomes = data.filter((income) => !income.disabled).map((income) => new Income(income));
+  constructor(data: IncomeInputs[], taxRegion: TaxRegion = 'US') {
+    this.incomes = data.filter((income) => !income.disabled).map((income) => new Income(income, taxRegion));
   }
 
   getActiveIncomesByTimeFrame(simulationState: SimulationState): Income[] {
@@ -147,7 +149,10 @@ export class Income {
   private incomeType: IncomeType;
   private withholdingRate: number;
 
-  constructor(data: IncomeInputs) {
+  constructor(
+    data: IncomeInputs,
+    private taxRegion: TaxRegion = 'US'
+  ) {
     this.hasOneTimeIncomeOccurred = false;
     this.id = data.id;
     this.name = data.name;
@@ -214,7 +219,12 @@ export class Income {
     switch (this.incomeType) {
       case 'wage':
         amountWithheld = income * (this.withholdingRate / 100);
-        ficaTax = income * 0.0765; // FICA: 6.2% Social Security + 1.45% Medicare
+        if (this.taxRegion === 'IN') {
+          // India: professional tax is the only payroll levy; employee PF is savings, modelled as an account
+          ficaTax = income >= INDIA_PROFESSIONAL_TAX_THRESHOLD_MONTHLY ? INDIA_PROFESSIONAL_TAX_MONTHLY : 0;
+        } else {
+          ficaTax = income * 0.0765; // FICA: 6.2% Social Security + 1.45% Medicare
+        }
         break;
       case 'exempt':
         taxFreeIncome = income;

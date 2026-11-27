@@ -25,6 +25,7 @@ import { Debts, DebtsProcessor, type DebtsData, type DebtData } from './debts';
 import { PhysicalAssets, PhysicalAssetsProcessor, type PhysicalAssetsData, type PhysicalAssetData } from './physical-assets';
 import { TaxProcessor, type TaxesData } from './taxes';
 import { type AssetFlows, zeroAssetAmounts } from './asset';
+import { REGION_CONFIG } from '@/lib/config/region';
 
 /**
  * Tax convergence threshold in dollars.
@@ -99,7 +100,7 @@ export class FinancialSimulationEngine {
     const simulationContext: SimulationContext = this.initSimulationContext(timeline);
     const simulationState: SimulationState = this.initSimulationState(simulationContext);
 
-    const incomes = new Incomes(Object.values(this.inputs.incomes));
+    const incomes = new Incomes(Object.values(this.inputs.incomes), REGION_CONFIG.taxRegion);
     const expenses = new Expenses(Object.values(this.inputs.expenses));
     const debts = new Debts(Object.values(this.inputs.debts));
     const physicalAssets = new PhysicalAssets(Object.values(this.inputs.physicalAssets));
@@ -114,7 +115,7 @@ export class FinancialSimulationEngine {
     const debtsProcessor = new DebtsProcessor(simulationState, debts);
     const physicalAssetsProcessor = new PhysicalAssetsProcessor(simulationState, physicalAssets);
     const portfolioProcessor = new PortfolioProcessor(simulationState, simulationContext, contributionRules, this.inputs.glidePath);
-    const taxProcessor = new TaxProcessor(simulationState, this.inputs.taxSettings.filingStatus);
+    const taxProcessor = new TaxProcessor(simulationState, this.inputs.taxSettings.filingStatus, REGION_CONFIG.taxRegion);
 
     // Init phase identifier
     const phaseIdentifier = new PhaseIdentifier(simulationState, timeline);

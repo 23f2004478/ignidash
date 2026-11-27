@@ -1,4 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
+
+// Fork: the engine defaults to India (src/lib/config/region.ts). These scenarios are US
+// retirement cases (RMDs, 401k, FICA), so pin the US region to keep upstream coverage.
+vi.mock('@/lib/config/region', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/lib/config/region')>();
+  return { ...mod, REGION_CONFIG: mod.REGION_CONFIGS.US };
+});
 
 import type { SimulatorInputs } from '@/lib/schemas/inputs/simulator-schema';
 import type { AccountInputs } from '@/lib/schemas/inputs/account-form-schema';
