@@ -16,6 +16,15 @@ This is a fork of schelskedevco/ignidash adapted for India. `origin` is the fork
   1.25L, dividends at slab. Payroll levy is Karnataka professional tax (Rs 200/month) in place of FICA. Output
   reuses the US-shaped fields (`federalIncomeTaxes` carries Indian income tax), so charts work unchanged.
   Tests: `src/lib/calc/taxes-india.test.ts`.
+- **Firefly III connector:** `convex/firefly.ts` (actions `getSnapshot`, `syncNow`; daily cron `scheduledSync`),
+  `convex/utils/firefly_client.ts` (Firefly API + RBI repo rate fetch), `convex/utils/firefly_mapping.ts` (pure
+  mapping, shared with the UI; tests beside it). UI: `src/app/dashboard/components/firefly/` (sync dialog from the NW
+  Tracker header, plan-seed dialog from the Plans header). Firefly entries live in the NW Tracker with ids
+  `firefly-asset-N` / `firefly-liability-N`, so existing plan sync carries balances (and, new, liability `apr`) into
+  linked plan accounts and debts. Per-user settings (exclusions, balance overrides, loan rate rules, auto sync) sit on
+  `finances.firefly`. Repo-linked loans store a spread; rate = live RBI repo + spread on every sync. Config:
+  `FIREFLY_URL`, `FIREFLY_TOKEN` (Convex env; forwarded by `scripts/convex-init.sh`). `convex/_generated/api.d.ts` was
+  extended by hand for the new modules; `npx convex dev` regenerates the same listing.
 - **Not done yet:** UI labels still say Federal / FICA / NIIT; US account types (401k, Roth, HSA) and RMDs still
   show; no old regime, HRA, 80C, EPF/NPS account types.
 - Keep the diff against upstream small and contained so `git merge upstream/main` stays easy.

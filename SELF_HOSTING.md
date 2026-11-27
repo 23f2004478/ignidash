@@ -185,6 +185,7 @@ These optional values in `.env.local` turn on extra features. `convex-init` send
 | `RESEND_API_KEY`                                                | Password reset and notification emails         |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` | Subscriptions                                  |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`           | Server-side analytics (also passed to the app) |
+| `FIREFLY_URL`, `FIREFLY_TOKEN`                                  | Firefly III connector (this fork)              |
 
 After changing them, apply the change:
 

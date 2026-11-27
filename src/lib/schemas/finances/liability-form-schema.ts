@@ -25,6 +25,8 @@ export const liabilityFormSchema = z.object({
       { message: 'Must be a valid http:// or https:// URL' }
     ),
   type: z.enum(['mortgage', 'autoLoan', 'studentLoan', 'personalLoan', 'creditCard', 'medicalDebt', 'other']),
+  /** Yearly rate set by the Firefly connector; synced to linked plan debts */
+  apr: z.number().optional(),
 });
 
 export type LiabilityInputs = z.infer<typeof liabilityFormSchema>;

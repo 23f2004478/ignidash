@@ -103,7 +103,7 @@ export async function syncLiabilityToPlans(
       const debts = mapWithChanges(
         plan.debts,
         (d) => d.syncedFinanceId === liability.id,
-        (d) => ({ ...d, balance: liability.balance, name: liability.name })
+        (d) => ({ ...d, balance: liability.balance, name: liability.name, ...(liability.apr !== undefined ? { apr: liability.apr } : {}) })
       );
       if (debts.changed) patch.debts = debts.items;
     }

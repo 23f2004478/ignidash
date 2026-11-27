@@ -5,7 +5,11 @@ import { api } from '@/convex/_generated/api';
 import type { Preloaded } from 'convex/react';
 import { usePreloadedAuthQuery } from '@convex-dev/better-auth/nextjs/client';
 import { useState } from 'react';
-import { WalletIcon as MicroWalletIcon, CreditCardIcon as MicroCreditCardIcon } from '@heroicons/react/16/solid';
+import {
+  WalletIcon as MicroWalletIcon,
+  CreditCardIcon as MicroCreditCardIcon,
+  ArrowPathIcon as MicroArrowPathIcon,
+} from '@heroicons/react/16/solid';
 import { WalletIcon, CreditCardIcon } from '@heroicons/react/24/outline';
 import { ExternalLinkIcon } from 'lucide-react';
 
@@ -23,6 +27,7 @@ import DeleteDataItemAlert from '@/components/ui/delete-data-item-alert';
 import { cn } from '@/lib/utils';
 import AssetDialog from './dialogs/asset-dialog';
 import LiabilityDialog from './dialogs/liability-dialog';
+import FireflySyncDialog from './firefly/firefly-sync-dialog';
 
 function getAssetDesc(asset: AssetInputs) {
   return (
@@ -103,6 +108,7 @@ export default function Finances({ preloadedAssets, preloadedLiabilities }: Fina
     setSelectedAsset(null);
   };
 
+  const [fireflyDialogOpen, setFireflyDialogOpen] = useState(false);
   const [liabilityDialogOpen, setLiabilityDialogOpen] = useState(false);
   const [selectedLiability, setSelectedLiability] = useState<LiabilityInputs | null>(null);
 
@@ -162,6 +168,15 @@ export default function Finances({ preloadedAssets, preloadedLiabilities }: Fina
             <span className="text-muted-foreground text-2xl/8 font-normal sm:text-xl/8">{formatCompactCurrency(netWorth, 2)}</span>
           </div>
           <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button outline onClick={() => setFireflyDialogOpen(true)}>
+                  <MicroArrowPathIcon />
+                  <span className="sr-only">Sync from Firefly III</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Sync from Firefly III</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button outline onClick={() => setAssetDialogOpen(true)}>
@@ -271,6 +286,9 @@ export default function Finances({ preloadedAssets, preloadedLiabilities }: Fina
       </Dialog>
       <Dialog size="xl" open={liabilityDialogOpen} onClose={handleLiabilityDialogClose}>
         <LiabilityDialog onClose={handleLiabilityDialogClose} selectedLiability={selectedLiability} numLiabilities={numLiabilities} />
+      </Dialog>
+      <Dialog size="3xl" open={fireflyDialogOpen} onClose={() => setFireflyDialogOpen(false)}>
+        <FireflySyncDialog open={fireflyDialogOpen} onClose={() => setFireflyDialogOpen(false)} />
       </Dialog>
       <DeleteDataItemAlert dataToDelete={assetToDelete} setDataToDelete={setAssetToDelete} deleteData={deleteAsset} />
       <DeleteDataItemAlert dataToDelete={liabilityToDelete} setDataToDelete={setLiabilityToDelete} deleteData={deleteLiability} />

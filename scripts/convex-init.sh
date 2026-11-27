@@ -81,7 +81,9 @@ for variable_name in \
   STRIPE_WEBHOOK_SECRET \
   STRIPE_PRICE_ID \
   NEXT_PUBLIC_POSTHOG_KEY \
-  NEXT_PUBLIC_POSTHOG_HOST
+  NEXT_PUBLIC_POSTHOG_HOST \
+  FIREFLY_URL \
+  FIREFLY_TOKEN
 do
   variable_value=$(printenv "$variable_name" 2>/dev/null || true)
   if [ -n "$variable_value" ]; then

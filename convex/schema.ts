@@ -4,6 +4,7 @@ import { v } from 'convex/values';
 import { planDataFields } from './validators/plan_data_fields';
 import { assetValidator } from './validators/asset_validator';
 import { liabilityValidator } from './validators/liability_validator';
+import { fireflySettingsValidator } from './validators/firefly_settings_validator';
 import { userFeedbackValidator } from './validators/user_feedback_validator';
 
 export default defineSchema({
@@ -24,6 +25,7 @@ export default defineSchema({
     userId: v.string(),
     assets: v.array(assetValidator),
     liabilities: v.array(liabilityValidator),
+    firefly: v.optional(fireflySettingsValidator),
   }).index('by_userId', ['userId']),
   conversations: defineTable({
     userId: v.string(),

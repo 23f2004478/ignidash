@@ -7,7 +7,7 @@ import { usePreloadedAuthQuery } from '@convex-dev/better-auth/nextjs/client';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
-import { PlusIcon } from '@heroicons/react/16/solid';
+import { PlusIcon, ArrowDownTrayIcon } from '@heroicons/react/16/solid';
 import posthog from 'posthog-js';
 
 import { Dialog } from '@/components/catalyst/dialog';
@@ -26,6 +26,7 @@ import { simulatorFromConvex } from '@/lib/utils/data-transformers';
 import DeleteDataItemAlert from '@/components/ui/delete-data-item-alert';
 
 import PlanDialog from './dialogs/plan-dialog';
+import FireflyPlanDialog from './firefly/firefly-plan-dialog';
 import Finances from './finances';
 
 interface PlanListItems {
@@ -138,6 +139,7 @@ export default function PlanList({ preloadedPlans, preloadedAssets, preloadedLia
   const allPlans = useMemo(() => plans?.map((plan) => ({ id: plan._id, name: plan.name })) ?? [], [plans]);
 
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [fireflyPlanDialogOpen, setFireflyPlanDialogOpen] = useState(false);
 
   const [selectedPlan, setSelectedPlan] = useState<Doc<'plans'> | null>(null);
   const [planToClone, setPlanToClone] = useState<{ id: Id<'plans'>; name: string } | undefined>(undefined);
@@ -191,10 +193,16 @@ export default function PlanList({ preloadedPlans, preloadedAssets, preloadedLia
       <div className="-mx-2 sm:-mx-3 lg:-mx-4 lg:pr-96">
         <header className="from-emphasized-background to-background border-border/50 flex items-center justify-between border-b bg-gradient-to-l px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
           <Heading level={3}>Plans</Heading>
-          <Button color="rose" onClick={() => setPlanDialogOpen(true)}>
-            <PlusIcon />
-            Create
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button outline onClick={() => setFireflyPlanDialogOpen(true)}>
+              <ArrowDownTrayIcon />
+              From Firefly
+            </Button>
+            <Button color="rose" onClick={() => setPlanDialogOpen(true)}>
+              <PlusIcon />
+              Create
+            </Button>
+          </div>
         </header>
         <ul role="list" className="divide-border/25 divide-y">
           {plans?.map((plan) => {
@@ -222,6 +230,9 @@ export default function PlanList({ preloadedPlans, preloadedAssets, preloadedLia
           planToClone={planToClone}
           onClose={handlePlanDialogClose}
         />
+      </Dialog>
+      <Dialog size="3xl" open={fireflyPlanDialogOpen} onClose={() => setFireflyPlanDialogOpen(false)}>
+        <FireflyPlanDialog open={fireflyPlanDialogOpen} onClose={() => setFireflyPlanDialogOpen(false)} />
       </Dialog>
       <DeleteDataItemAlert dataToDelete={planToDelete} setDataToDelete={setPlanToDelete} deleteData={deletePlan} desc={deletePlanDesc} />
     </>
