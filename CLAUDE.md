@@ -167,3 +167,5 @@ Centralized in `src/lib/config/currency.ts` and `src/lib/utils/format-currency.t
 - ESLint: flat config (ESLint 9), extends `next/core-web-vitals` + `next/typescript` + `prettier`
 - Unused variables: underscore prefix allowed (e.g., `_unused`)
 - All components are `'use client'` unless explicitly server components
+
+Native (systemd, no Docker) hosting on a private-network box: see HOSTING-NATIVE.md.
